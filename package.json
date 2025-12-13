@@ -1,0 +1,29 @@
+{
+  "name": "susuchain",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A mobile-first decentralized micro-savings and emergency fund DApp",
+  "workspaces": [
+    "contracts",
+    "frontend"
+  ],
+  "scripts": {
+    "contracts:install": "cd contracts && npm install",
+    "frontend:install": "cd frontend && npm install",
+    "contracts:compile": "cd contracts && npm run compile",
+    "contracts:test": "cd contracts && npm test",
+    "contracts:deploy": "cd contracts && npm run deploy",
+    "frontend:dev": "cd frontend && npm run dev",
+    "frontend:build": "cd frontend && npm run build",
+    "dev": "npm run frontend:dev"
+  },
+  "keywords": [
+    "web3",
+    "defi",
+    "savings",
+    "scroll",
+    "blockchain"
+  ],
+  "author": "",
+  "license": "MIT"
+}

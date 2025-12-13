@@ -1,0 +1,19 @@
+# Hardhat files
+cache/
+artifacts/
+
+# TypeChain
+typechain/
+typechain-types/
+
+# Coverage
+coverage/
+coverage.json
+
+# Env
+.env
+.env.local
+
+# Misc
+node_modules/
+.DS_Store
