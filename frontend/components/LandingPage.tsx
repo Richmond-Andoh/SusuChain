@@ -38,10 +38,10 @@ export default function LandingPage({ onResetTutorial }: LandingPageProps) {
     return (
         <div className="min-h-screen bg-black text-zinc-100 font-sans selection:bg-cyan-500/30">
             {/* Modern Navbar */}
-            <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4 transition-all duration-300">
-                <div className="max-w-7xl mx-auto flex items-center justify-between p-4 rounded-2xl bg-black/20 backdrop-blur-md border border-white/10 shadow-lg hover:border-white/20 transition-all">
-                    <div className="flex items-center gap-3">
-                        <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-lg border border-white/10 group cursor-pointer">
+            <nav className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 py-4 transition-all duration-300">
+                <div className="max-w-7xl mx-auto flex items-center justify-between p-3 sm:p-4 rounded-2xl bg-black/20 backdrop-blur-md border border-white/10 shadow-lg hover:border-white/20 transition-all">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden shadow-lg border border-white/10 group cursor-pointer">
                             <Image
                                 src="/logo.jpg"
                                 alt="SusuChain Logo"
@@ -49,7 +49,7 @@ export default function LandingPage({ onResetTutorial }: LandingPageProps) {
                                 className="object-cover group-hover:scale-110 transition-transform duration-500"
                             />
                         </div>
-                        <span className="font-bold text-xl tracking-tight text-white/90">
+                        <span className="font-bold text-lg sm:text-xl tracking-tight text-white/90">
                             SusuChain
                         </span>
                     </div>
@@ -63,7 +63,7 @@ export default function LandingPage({ onResetTutorial }: LandingPageProps) {
             </nav>
 
             {/* Hero Section */}
-            <section className="relative min-h-screen flex flex-col items-center justify-center text-center overflow-hidden pt-20">
+            <section className="relative min-h-[90vh] sm:min-h-screen flex flex-col items-center justify-center text-center overflow-hidden pt-24 sm:pt-20">
                 {/* Hero Background Image */}
                 <div className="absolute inset-0 z-0">
                     <Image
@@ -81,39 +81,39 @@ export default function LandingPage({ onResetTutorial }: LandingPageProps) {
                     <div className="absolute inset-0 bg-radial-gradient from-cyan-500/10 via-transparent to-transparent opacity-50" />
                 </div>
 
-                <div className="relative z-10 px-6 space-y-8 max-w-5xl mx-auto">
+                <div className="relative z-10 px-4 sm:px-6 space-y-6 sm:space-y-8 max-w-5xl mx-auto w-full">
                     {/* Badge */}
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black/40 border border-cyan-500/30 backdrop-blur-md shadow-[0_0_15px_rgba(6,182,212,0.15)] hover:border-cyan-400/50 transition-colors cursor-default animate-fade-in-up">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-black/40 border border-cyan-500/30 backdrop-blur-md shadow-[0_0_15px_rgba(6,182,212,0.15)] hover:border-cyan-400/50 transition-colors cursor-default animate-fade-in-up">
                         <span className="relative flex h-2 w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
                         </span>
-                        <span className="text-xs font-semibold text-cyan-100 tracking-wide uppercase">Live on Scroll Sepolia</span>
+                        <span className="text-[10px] sm:text-xs font-semibold text-cyan-100 tracking-wide uppercase">Live on Scroll Sepolia</span>
                     </div>
 
                     {/* Headline */}
-                    <h1 className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tighter text-white mb-6 animate-fade-in-up delay-100 drop-shadow-2xl">
+                    <h1 className="text-4xl sm:text-6xl md:text-8xl lg:text-9xl font-black tracking-tighter text-white mb-4 sm:mb-6 animate-fade-in-up delay-100 drop-shadow-2xl px-2">
                         Supercharging <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 animate-gradient-xy pb-2">
+                        <span className="block mt-2 sm:mt-0 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 animate-gradient-xy pb-2">
                             Web3 Savings
                         </span>
                     </h1>
 
                     {/* Subheadline */}
-                    <p className="text-xl md:text-2xl text-zinc-300 max-w-2xl mx-auto leading-relaxed font-light animate-fade-in-up delay-200 drop-shadow-md">
-                        The decentralized vault for your emergency fund. <br className="hidden md:block" />
+                    <p className="text-base sm:text-xl md:text-2xl text-zinc-300 max-w-2xl mx-auto leading-relaxed font-light animate-fade-in-up delay-200 drop-shadow-md px-4">
+                        The decentralized vault for your emergency fund. <br className="hidden sm:block" />
                         Fully automated, secure, and built on the mesh.
                     </p>
 
                     {/* CTA */}
-                    <div className="pt-10 w-full flex flex-col items-center gap-6 animate-fade-in-up delay-300">
-                        <div className="relative group">
+                    <div className="pt-6 sm:pt-10 w-full flex flex-col items-center gap-4 sm:gap-6 animate-fade-in-up delay-300">
+                        <div className="relative group w-full max-w-[320px] sm:max-w-md mx-auto">
                             <div className="absolute -inset-1 bg-gradient-to-r from-cyan-600 to-purple-600 rounded-2xl blur opacity-40 group-hover:opacity-75 transition duration-1000 group-hover:duration-200" />
                             <div className="relative bg-black/50 backdrop-blur-xl rounded-2xl p-1">
                                 <WalletConnectCard />
                             </div>
                         </div>
-                        <p className="text-cyan-200/60 text-sm font-medium tracking-wide">
+                        <p className="text-cyan-200/60 text-xs sm:text-sm font-medium tracking-wide max-w-[250px] sm:max-w-none mx-auto leading-relaxed">
                             <span className="inline-block mr-2">•</span>
                             No email required
                             <span className="inline-block mx-2">•</span>
