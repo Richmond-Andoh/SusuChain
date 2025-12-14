@@ -10,39 +10,45 @@ export default function BottomNav() {
     const isActive = (path: string) => pathname === path;
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 pb-safe">
-            <div className="flex justify-around items-center h-16 max-w-md mx-auto">
+        <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center pointer-events-none">
+            <div className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-full px-6 py-3 shadow-2xl shadow-indigo-500/10 pointer-events-auto flex items-center gap-8">
                 <Link
                     href="/dashboard"
-                    className={`flex flex-col items-center gap-1 p-2 transition-colors ${isActive("/dashboard")
-                            ? "text-indigo-600 dark:text-indigo-400"
-                            : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
+                    className={`relative p-2 transition-all duration-300 group ${isActive("/dashboard")
+                        ? "text-cyan-400"
+                        : "text-zinc-500 hover:text-white"
                         }`}
                 >
-                    <LayoutDashboard size={24} />
-                    <span className="text-xs font-medium">Home</span>
+                    <LayoutDashboard size={24} className={`transition-transform duration-300 ${isActive("/dashboard") ? "scale-110" : "group-hover:scale-110"}`} />
+                    {isActive("/dashboard") && (
+                        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-cyan-400 rounded-full shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+                    )}
                 </Link>
 
                 <Link
                     href="/deposit"
-                    className={`flex flex-col items-center gap-1 p-2 transition-colors ${isActive("/deposit")
-                            ? "text-indigo-600 dark:text-indigo-400"
-                            : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
+                    className={`relative p-2 transition-all duration-300 group ${isActive("/deposit")
+                        ? "text-purple-400"
+                        : "text-zinc-500 hover:text-white"
                         }`}
                 >
-                    <PiggyBank size={24} />
-                    <span className="text-xs font-medium">Deposit</span>
+                    <PiggyBank size={24} className={`transition-transform duration-300 ${isActive("/deposit") ? "scale-110" : "group-hover:scale-110"}`} />
+                    {isActive("/deposit") && (
+                        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-purple-400 rounded-full shadow-[0_0_8px_rgba(192,132,252,0.8)]" />
+                    )}
                 </Link>
 
                 <Link
                     href="/withdraw"
-                    className={`flex flex-col items-center gap-1 p-2 transition-colors ${isActive("/withdraw")
-                            ? "text-indigo-600 dark:text-indigo-400"
-                            : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
+                    className={`relative p-2 transition-all duration-300 group ${isActive("/withdraw")
+                        ? "text-amber-400"
+                        : "text-zinc-500 hover:text-white"
                         }`}
                 >
-                    <Wallet size={24} />
-                    <span className="text-xs font-medium">Withdraw</span>
+                    <Wallet size={24} className={`transition-transform duration-300 ${isActive("/withdraw") ? "scale-110" : "group-hover:scale-110"}`} />
+                    {isActive("/withdraw") && (
+                        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-amber-400 rounded-full shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
+                    )}
                 </Link>
             </div>
         </div>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ethers } from "ethers";
 import { toast } from "sonner";
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from "../lib/constants";
+import { ArrowUpRight, Plus } from "lucide-react";
 
 interface DepositProps {
     provider: ethers.BrowserProvider;
@@ -44,36 +45,42 @@ export default function Deposit({ provider, onSuccess }: DepositProps) {
     };
 
     return (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-            <div className="p-5 sm:p-6">
-                <h3 className="text-base sm:text-lg font-semibold mb-4 text-zinc-900 dark:text-zinc-100">
-                    Add Funds
-                </h3>
-                <form onSubmit={handleDeposit} className="space-y-4">
+        <div className="bg-transparent rounded-[2rem]">
+            <div className="p-6">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="p-3 bg-indigo-500/20 rounded-xl text-indigo-400 border border-indigo-500/30">
+                        <Plus size={24} />
+                    </div>
                     <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                            Amount (ETH)
-                        </label>
-                        <div className="relative">
+                        <h3 className="text-xl font-bold text-white">
+                            Add Funds
+                        </h3>
+                        <p className="text-zinc-400 text-sm">Top up your savings vault securely</p>
+                    </div>
+                </div>
+
+                <form onSubmit={handleDeposit} className="space-y-6">
+                    <div>
+                        <div className="relative group">
                             <input
                                 type="number"
                                 step="0.0001"
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
-                                placeholder="0.01"
-                                className="w-full px-4 py-3 pr-16 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-base"
+                                placeholder="0.00"
+                                className="w-full px-5 py-4 pr-20 rounded-xl border border-white/10 bg-black/40 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all font-mono text-2xl"
                                 disabled={loading}
                             />
-                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 dark:text-zinc-400 text-sm font-medium">
-                                ETH
-                            </span>
+                            <div className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
+                                <span className="text-indigo-400 font-bold bg-indigo-500/10 px-2 py-1 rounded text-sm">ETH</span>
+                            </div>
                         </div>
                     </div>
 
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-sm transition-all disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center active:scale-[0.98] text-sm sm:text-base"
+                        className="w-full py-4 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-[0_0_20px_rgba(99,102,241,0.3)] hover:shadow-[0_0_30px_rgba(99,102,241,0.5)] transition-all disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2 active:scale-[0.98] group"
                     >
                         {loading ? (
                             <span className="flex items-center gap-2">
@@ -81,9 +88,16 @@ export default function Deposit({ provider, onSuccess }: DepositProps) {
                                 Depositing...
                             </span>
                         ) : (
-                            "Deposit"
+                            <>
+                                <span>Inject Liquidity</span>
+                                <ArrowUpRight className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" size={20} />
+                            </>
                         )}
                     </button>
+
+                    <p className="text-center text-xs text-zinc-500">
+                        Funds are secured by smart contract logic.
+                    </p>
                 </form>
             </div>
         </div>

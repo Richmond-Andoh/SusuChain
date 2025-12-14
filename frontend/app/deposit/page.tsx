@@ -24,13 +24,18 @@ export default function DepositPage() {
     }
 
     return (
-        <main className="flex min-h-screen flex-col items-center p-6 bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 font-sans">
-            <div className="w-full max-w-md space-y-6 mt-6">
-                <h1 className="text-2xl font-bold">Deposit</h1>
-                <p className="text-zinc-500 dark:text-zinc-400">
-                    Add funds to your emergency savings vault.
-                </p>
+        <main className="relative min-h-screen flex flex-col items-center p-4 sm:p-6 font-sans overflow-hidden">
+            {/* Background Image & Effects */}
+            <div className="absolute inset-0 z-0">
+                <div
+                    className="absolute inset-0 bg-cover bg-center opacity-40"
+                    style={{ backgroundImage: "url('/hero-grid.jpg')" }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-black pointer-events-none" />
+                <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10 pointer-events-none mix-blend-overlay" />
+            </div>
 
+            <div className="relative z-10 w-full max-w-lg space-y-6 mt-16 sm:mt-24 animate-fade-in-up">
                 <Deposit
                     provider={provider}
                     onSuccess={() => router.push("/dashboard")}

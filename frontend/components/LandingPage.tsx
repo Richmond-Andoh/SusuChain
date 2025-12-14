@@ -83,7 +83,7 @@ export default function LandingPage({ onResetTutorial }: LandingPageProps) {
 
                 <div className="relative z-10 px-4 sm:px-6 space-y-6 sm:space-y-8 max-w-5xl mx-auto w-full">
                     {/* Badge */}
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-black/40 border border-cyan-500/30 backdrop-blur-md shadow-[0_0_15px_rgba(6,182,212,0.15)] hover:border-cyan-400/50 transition-colors cursor-default animate-fade-in-up">
+                    <div className="inline-flex items-center gap-2 px-3 sm:mt-8 py-1.5 sm:px-4 sm:py-2 rounded-full bg-black/40 border border-cyan-500/30 backdrop-blur-md shadow-[0_0_15px_rgba(6,182,212,0.15)] hover:border-cyan-400/50 transition-colors cursor-default animate-fade-in-up">
                         <span className="relative flex h-2 w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>

@@ -4,18 +4,18 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { ethers } from "ethers";
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from "../lib/constants";
 
-// Sepolia Network Config
-const SEPOLIA_CHAIN_ID = "0xaa36a7"; // 11155111
-const SEPOLIA_CONFIG = {
-    chainId: SEPOLIA_CHAIN_ID,
-    chainName: "Sepolia",
+// Scroll Sepolia Network Config
+const SCROLL_SEPOLIA_CHAIN_ID = "0x8274f"; // 534351
+const SCROLL_SEPOLIA_CONFIG = {
+    chainId: SCROLL_SEPOLIA_CHAIN_ID,
+    chainName: "Scroll Sepolia",
     nativeCurrency: {
-        name: "Sepolia Ether",
+        name: "Ether",
         symbol: "ETH",
         decimals: 18,
     },
-    rpcUrls: ["https://ethereum-sepolia-rpc.publicnode.com"],
-    blockExplorerUrls: ["https://sepolia.etherscan.io/"],
+    rpcUrls: ["https://sepolia-rpc.scroll.io/"],
+    blockExplorerUrls: ["https://sepolia.scrollscan.com/"],
 };
 
 interface WalletContextType {
@@ -79,7 +79,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     const checkNetwork = async (provider: ethers.BrowserProvider) => {
         const network = await provider.getNetwork();
-        if (network.chainId !== BigInt(11155111)) {
+        if (network.chainId !== BigInt(534351)) {
             setIsWrongNetwork(true);
         } else {
             setIsWrongNetwork(false);
@@ -137,7 +137,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             try {
                 await window.ethereum.request({
                     method: "wallet_switchEthereumChain",
-                    params: [{ chainId: SEPOLIA_CHAIN_ID }],
+                    params: [{ chainId: SCROLL_SEPOLIA_CHAIN_ID }],
                 });
                 setIsWrongNetwork(false);
             } catch (switchError: any) {
@@ -145,7 +145,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                     try {
                         await window.ethereum.request({
                             method: "wallet_addEthereumChain",
-                            params: [SEPOLIA_CONFIG],
+                            params: [SCROLL_SEPOLIA_CONFIG],
                         });
                         setIsWrongNetwork(false);
                     } catch (addError) {

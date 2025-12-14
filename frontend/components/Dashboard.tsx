@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
-import { AlertTriangle, X } from "lucide-react";
+import { AlertTriangle, X, TrendingUp, ShieldCheck, Clock, Wallet, Zap, Activity, Database, Hash, ExternalLink, Copy, CheckCircle2, Target } from "lucide-react";
 import { toast } from "sonner";
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from "../lib/constants";
-
 import Deposit from "./Deposit";
+import { useWallet } from "../context/WalletContext";
 
 interface DashboardProps {
     provider: ethers.BrowserProvider;
@@ -20,16 +20,32 @@ interface VaultData {
     progress: number;
 }
 
+interface NetworkStats {
+    blockNumber: number;
+    gasPrice: string;
+    chainId: bigint;
+}
+
+interface Transaction {
+    hash: string;
+    amount: string;
+    blockNumber: number;
+    timestamp?: number;
+}
+
 export default function Dashboard({ provider, account }: DashboardProps) {
+    const { refreshVaultStatus } = useWallet();
     const [data, setData] = useState<VaultData | null>(null);
+    const [networkStats, setNetworkStats] = useState<NetworkStats | null>(null);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [showWithdrawModal, setShowWithdrawModal] = useState(false);
     const [withdrawLoading, setWithdrawLoading] = useState(false);
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         fetchVaultData();
-        // Poll for updates every 10 seconds
-        const interval = setInterval(fetchVaultData, 10000);
+        const interval = setInterval(fetchVaultData, 10000); // Live system updates
         return () => clearInterval(interval);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [provider, account]);
@@ -37,43 +53,72 @@ export default function Dashboard({ provider, account }: DashboardProps) {
     const fetchVaultData = async () => {
         try {
             const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
-            
-            // Fetch vault data
-            const vault = await contract.vaults(account);
-            const balanceEth = ethers.formatEther(vault.balance || 0);
-            const targetEth = ethers.formatEther(vault.targetAmount || 0);
 
-            // Fetch all Deposited events for this user to calculate total deposited
-            let finalTotalDeposited = balanceEth; // Default to balance if event query fails
+            // Parallelize fetching for speed
+            const [vault, blockNum, feeData, network] = await Promise.all([
+                contract.vaults(account),
+                provider.getBlockNumber(),
+                provider.getFeeData(),
+                provider.getNetwork()
+            ]);
+
+            // Network Stats
+            setNetworkStats({
+                blockNumber: blockNum,
+                gasPrice: ethers.formatUnits(feeData.gasPrice || 0, 'gwei'),
+                chainId: network.chainId
+            });
+
+            // Vault Data
+            // Access by index to be safe: 0=balance, 1=targetAmount
+            const balanceEth = ethers.formatEther(vault[0] || 0);
+            const targetEth = ethers.formatEther(vault[1] || 0);
+
+            // History & Total Deposited
+            let finalTotalDeposited = balanceEth;
+            let txHistory: Transaction[] = [];
+
             try {
                 const depositFilter = contract.filters.Deposited(account);
                 const depositEvents = await contract.queryFilter(depositFilter);
-                
-                // Sum all deposit amounts from events
+
                 let totalDepositedWei = BigInt(0);
+
+                // Process recent transactions (last 3)
+                const recentEvents = depositEvents.slice(-3).reverse(); // Get last 3
+
+                // Fetch timestamps for recent events
+                txHistory = await Promise.all(recentEvents.map(async (event: any) => {
+                    const block = await provider.getBlock(event.blockNumber);
+                    return {
+                        hash: event.transactionHash,
+                        amount: ethers.formatEther(event.args.amount),
+                        blockNumber: event.blockNumber,
+                        timestamp: block?.timestamp
+                    };
+                }));
+
                 depositEvents.forEach((event: any) => {
                     if (event.args && event.args.amount) {
                         totalDepositedWei += event.args.amount;
                     }
                 });
-                
-                // If events found, use the sum; otherwise use current balance
+
                 if (depositEvents.length > 0) {
                     finalTotalDeposited = ethers.formatEther(totalDepositedWei);
                 }
             } catch (eventErr) {
-                // If event query fails, use current balance as total deposited
-                console.warn("Could not fetch deposit events, using current balance:", eventErr);
-                finalTotalDeposited = balanceEth;
+                console.warn("Could not fetch events:", eventErr);
             }
 
-            // Calculate progress percentage
+            setTransactions(txHistory);
+
+            // Progress Calc
             let progress = 0;
             const balanceNum = parseFloat(balanceEth);
             const targetNum = parseFloat(targetEth);
             if (targetNum > 0) {
                 progress = (balanceNum / targetNum) * 100;
-                // Cap at 100% for visual purposes
                 if (progress > 100) progress = 100;
             }
 
@@ -85,8 +130,6 @@ export default function Dashboard({ provider, account }: DashboardProps) {
             });
         } catch (err) {
             console.error("Error fetching vault data:", err);
-            // Set loading to false even on error so UI can render
-            setLoading(false);
         } finally {
             setLoading(false);
         }
@@ -104,7 +147,10 @@ export default function Dashboard({ provider, account }: DashboardProps) {
             await tx.wait();
 
             toast.success("Withdrawal Successful!", { description: "Your funds have been returned." });
-            fetchVaultData();
+
+            // Refresh global vault status to trigger redirect to Create Page
+            await refreshVaultStatus();
+
             setShowWithdrawModal(false);
         } catch (err: any) {
             console.error(err);
@@ -114,177 +160,272 @@ export default function Dashboard({ provider, account }: DashboardProps) {
         }
     };
 
+    const copyAddress = () => {
+        navigator.clipboard.writeText(CONTRACT_ADDRESS);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        toast.success("Address Copied");
+    };
+
     if (loading) {
         return (
             <div className="w-full p-8 flex justify-center">
-                <span className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                <div className="flex flex-col items-center gap-4">
+                    <span className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin shadow-[0_0_20px_rgba(6,182,212,0.5)]" />
+                    <p className="text-cyan-500 font-mono animate-pulse">INITIALIZING UPLINK...</p>
+                </div>
             </div>
         );
     }
 
-    if (!data) {
-        return (
-            <div className="w-full p-8 text-center">
-                <p className="text-zinc-500 dark:text-zinc-400">No vault data available</p>
-            </div>
-        );
-    }
+    if (!data) return null;
 
-    // Helper function to format ETH values with up to 10 decimal places, removing trailing zeros
-    const formatEth = (value: number): string => {
-        if (value === 0) return '0';
-        const formatted = value.toFixed(10).replace(/\.?0+$/, '');
-        return formatted || '0';
-    };
-
-    // Calculate amount left to reach goal
+    const formatEth = (value: number) => value === 0 ? '0' : value.toFixed(4).replace(/\.?0+$/, '');
     const balanceNum = parseFloat(data.balance) || 0;
     const targetNum = parseFloat(data.targetAmount) || 0;
     const totalDepositedNum = parseFloat(data.totalDeposited) || 0;
     const amountLeft = Math.max(0, targetNum - balanceNum);
 
     return (
-        <div className="w-full space-y-4 sm:space-y-5">
-            {/* Savings Summary Card */}
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-                <div className="p-5 sm:p-6">
-                    <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-5 uppercase tracking-wide">
-                        Savings Summary
-                    </h2>
-                    
-                    <div className="space-y-4">
-                        {/* Current Balance - Most prominent */}
-                        <div>
-                            <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mb-1.5">
-                                Current Balance
-                            </p>
-                            <p className="text-3xl sm:text-4xl font-bold text-indigo-600 dark:text-indigo-400 leading-tight">
-                                {formatEth(balanceNum)}
-                                <span className="text-lg sm:text-xl font-semibold text-zinc-500 dark:text-zinc-400 ml-2">
-                                    ETH
-                                </span>
-                            </p>
+        <div className="w-full space-y-6 animate-fade-in-up">
+
+            {/* Network Status Bar - New Feature */}
+            {networkStats && (
+                <div className="flex flex-wrap gap-3 mb-2">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-950/30 border border-cyan-500/20 text-xs font-mono text-cyan-400">
+                        <Activity size={12} className="animate-pulse" />
+                        <span>BLOCK: {networkStats.blockNumber}</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-950/30 border border-purple-500/20 text-xs font-mono text-purple-400">
+                        <Zap size={12} />
+                        <span>GAS: {parseFloat(networkStats.gasPrice).toFixed(2)} Gwei</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-950/30 border border-indigo-500/20 text-xs font-mono text-indigo-400">
+                        <Database size={12} />
+                        <span>CHAIN ID: {networkStats.chainId.toString()}</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Main Hero Card */}
+            <div className="relative group overflow-hidden rounded-[2rem]">
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-600/20 via-blue-600/20 to-purple-600/20 blur opacity-75" />
+                <div className="relative bg-black/40 backdrop-blur-xl border border-white/10 p-8 rounded-[2rem] shadow-2xl">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                        {/* Current Balance */}
+                        <div className="relative z-10">
+                            <h2 className="text-sm font-medium text-cyan-400 tracking-wider uppercase mb-2 flex items-center gap-2">
+                                <Wallet size={16} /> Current Balance
+                            </h2>
+                            <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-100 to-zinc-400 tracking-tight drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+                                {formatEth(balanceNum)} <span className="text-2xl text-zinc-600 font-thin">ETH</span>
+                            </h1>
                         </div>
 
-                        {/* Grid for other metrics */}
-                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-                            {/* Savings Goal */}
-                            <div>
-                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1.5">
-                                    Savings Goal
-                                </p>
-                                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100 leading-tight">
-                                    {formatEth(targetNum)}
-                                    <span className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 ml-1">
-                                        ETH
-                                    </span>
-                                </p>
-                            </div>
+                        {/* Target/Goal Amount - Now Prominent */}
+                        <div className="relative z-10 md:text-right">
+                            <h2 className="text-sm font-medium text-purple-400 tracking-wider uppercase mb-2 flex items-center gap-2 md:justify-end">
+                                <Target size={16} /> Vault Goal
+                            </h2>
+                            <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-200 via-purple-100 to-indigo-200 tracking-tight drop-shadow-[0_0_15px_rgba(168,85,247,0.3)]">
+                                {formatEth(targetNum)} <span className="text-2xl text-zinc-600 font-thin">ETH</span>
+                            </h1>
+                        </div>
+                    </div>
 
-                            {/* Total Deposited */}
-                            <div>
-                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1.5">
-                                    Total Deposited
-                                </p>
-                                <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 leading-tight">
-                                    {formatEth(totalDepositedNum)}
-                                    <span className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 ml-1">
-                                        ETH
-                                    </span>
-                                </p>
+                    {/* Visual Progress Bar */}
+                    <div className="space-y-3">
+                        <div className="flex justify-between text-xs font-mono text-zinc-400 uppercase tracking-widest">
+                            <span>Sequence Progress</span>
+                            <div className="flex items-center gap-2">
+                                <span className={data.progress >= 100 ? "text-green-400 font-bold" : "text-cyan-400"}>
+                                    {data.progress.toFixed(1)}%
+                                </span>
                             </div>
                         </div>
-
-                        {/* Amount Left */}
-                        <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800">
-                            <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mb-1.5">
-                                Amount Left to Reach Goal
-                            </p>
-                            <p className="text-2xl sm:text-3xl font-bold text-amber-600 dark:text-amber-400 leading-tight">
-                                {formatEth(amountLeft)}
-                                <span className="text-base sm:text-lg font-semibold text-zinc-500 dark:text-zinc-400 ml-2">
-                                    ETH
-                                </span>
-                            </p>
+                        <div className="h-3 bg-zinc-900/80 rounded-full overflow-hidden border border-white/5 relative shadow-inner">
+                            <div className="absolute top-0 bottom-0 left-0 bg-cyan-500 blur-md opacity-40 transition-all duration-1000" style={{ width: `${data.progress}%` }} />
+                            <div
+                                className="h-full bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-600 transition-all duration-1000 ease-out rounded-full relative z-10"
+                                style={{ width: `${data.progress}%` }}
+                            />
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Progress Card */}
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-                <div className="p-5 sm:p-6">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                            Progress
-                        </h3>
-                        <p className="text-lg sm:text-xl font-bold text-indigo-600 dark:text-indigo-400">
-                            {data.progress.toFixed(1)}%
-                        </p>
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Metric 1 */}
+                <div className="bg-black/40 backdrop-blur-md border border-white/5 p-5 rounded-2xl hover:border-cyan-500/30 transition-all group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <TrendingUp size={40} className="text-cyan-400" />
                     </div>
-                    <div className="w-full h-3 sm:h-4 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-linear-to-r from-indigo-500 to-indigo-600 dark:from-indigo-500 dark:to-indigo-400 transition-all duration-1000 ease-out rounded-full shadow-sm"
-                            style={{ width: `${data.progress}%` }}
-                        />
+                    <div className="flex items-center gap-3 mb-2 text-zinc-400 group-hover:text-cyan-400 transition-colors">
+                        <TrendingUp size={18} />
+                        <span className="text-xs font-bold uppercase tracking-wider">Remaining</span>
                     </div>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-3">
-                        {formatEth(parseFloat(data.balance))} of {formatEth(parseFloat(data.targetAmount))} ETH saved
+                    <p className="text-2xl font-bold text-white font-mono">
+                        {formatEth(amountLeft)} ETH
                     </p>
                 </div>
-            </div>
 
-            {/* Deposit Form Card */}
-            <Deposit provider={provider} onSuccess={fetchVaultData} />
-
-            {/* Emergency Withdraw Card */}
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-red-200 dark:border-red-900/30 shadow-sm overflow-hidden">
-                <div className="p-5 sm:p-6">
-                    <div className="flex items-start gap-3 mb-4">
-                        <div className="w-10 h-10 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center shrink-0">
-                            <AlertTriangle className="text-red-600 dark:text-red-400" size={20} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <h3 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
-                                Emergency Withdraw
-                            </h3>
-                            <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                                Withdraw all funds immediately. This action will close your vault.
-                            </p>
-                        </div>
+                {/* Metric 2 - Total Deposited */}
+                <div className="bg-black/40 backdrop-blur-md border border-white/5 p-5 rounded-2xl hover:border-emerald-500/30 transition-all group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <ShieldCheck size={40} className="text-emerald-400" />
                     </div>
-                    <button
-                        onClick={() => setShowWithdrawModal(true)}
-                        className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 text-white font-semibold rounded-xl shadow-sm transition-all active:scale-[0.98] text-sm sm:text-base"
-                    >
-                        Withdraw All Funds
-                    </button>
+                    <div className="flex items-center gap-3 mb-2 text-zinc-400 group-hover:text-emerald-400 transition-colors">
+                        <ShieldCheck size={18} />
+                        <span className="text-xs font-bold uppercase tracking-wider">Total Deposited</span>
+                    </div>
+                    <p className="text-2xl font-bold text-white font-mono">
+                        {formatEth(totalDepositedNum)} ETH
+                    </p>
+                </div>
+
+                {/* Metric 3 */}
+                <div className="bg-black/40 backdrop-blur-md border border-white/5 p-5 rounded-2xl hover:border-purple-500/30 transition-all group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <Clock size={40} className="text-purple-400" />
+                    </div>
+                    <div className="flex items-center gap-3 mb-2 text-zinc-400 group-hover:text-purple-400 transition-colors">
+                        <Clock size={18} />
+                        <span className="text-xs font-bold uppercase tracking-wider">Status Details</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-green-500 rounded-full shadow-[0_0_5px_rgba(34,197,94,0.5)] animate-pulse" />
+                        <p className="text-xl font-bold text-white">Active</p>
+                    </div>
                 </div>
             </div>
 
-            {/* Withdrawal Confirmation Modal */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left Column: Deposit & Contract Info */}
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="bg-black/30 backdrop-blur-md border border-white/10 p-1 rounded-[2rem]">
+                        <Deposit provider={provider} onSuccess={fetchVaultData} />
+                    </div>
+
+                    {/* Transaction History - New Feature */}
+                    <div className="bg-black/20 backdrop-blur-md border border-white/5 rounded-3xl p-6">
+                        <h3 className="text-zinc-400 text-sm font-bold uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <Activity size={16} /> Recent Ledger Activity
+                        </h3>
+                        {transactions.length > 0 ? (
+                            <div className="space-y-3">
+                                {transactions.map((tx) => (
+                                    <div key={tx.hash} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-green-500/20 rounded-lg text-green-400">
+                                                <TrendingUp size={16} />
+                                            </div>
+                                            <div>
+                                                <p className="text-white font-mono text-sm">+{parseFloat(tx.amount).toFixed(4)} ETH</p>
+                                                <p className="text-zinc-500 text-xs">Block #{tx.blockNumber}</p>
+                                            </div>
+                                        </div>
+                                        <a
+                                            href={`https://sepolia.scrollscan.com/tx/${tx.hash}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-zinc-500 hover:text-cyan-400 transition-colors"
+                                        >
+                                            <ExternalLink size={16} />
+                                        </a>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-zinc-600 text-sm italic py-4">No recent activity detected on the mesh.</p>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right Column: Emergency & Contract Specs */}
+                <div className="space-y-6">
+                    {/* Contract Details Card - New Feature */}
+                    <div className="bg-zinc-900/50 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl">
+                        <div className="flex items-center gap-2 mb-4 text-zinc-400">
+                            <Hash size={18} />
+                            <span className="text-xs font-bold uppercase tracking-wider">Smart Contract Protocol</span>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <p className="text-xs text-zinc-500 mb-1">Contract Address</p>
+                                <div className="flex items-center gap-2 p-2 bg-black/40 rounded-lg border border-white/5 group">
+                                    <code className="text-cyan-500 text-xs font-mono break-all line-clamp-1">
+                                        {CONTRACT_ADDRESS}
+                                    </code>
+                                    <button onClick={copyAddress} className="text-zinc-500 hover:text-white transition-colors">
+                                        {copied ? <CheckCircle2 size={14} className="text-green-500" /> : <Copy size={14} />}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-3 bg-black/20 rounded-xl border border-white/5">
+                                    <p className="text-[10px] text-zinc-500 uppercase">Network</p>
+                                    <p className="text-zinc-300 text-sm font-semibold">Scroll</p>
+                                </div>
+                                <div className="p-3 bg-black/20 rounded-xl border border-white/5">
+                                    <p className="text-[10px] text-zinc-500 uppercase">Type</p>
+                                    <p className="text-zinc-300 text-sm font-semibold">Sepolia</p>
+                                </div>
+                            </div>
+                            <a
+                                href={`https://sepolia.scrollscan.com/address/${CONTRACT_ADDRESS}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block w-full py-2 text-center text-xs font-medium text-zinc-500 hover:text-cyan-400 border border-white/5 hover:border-cyan-500/30 rounded-lg transition-all"
+                            >
+                                View on Explorer
+                            </a>
+                        </div>
+                    </div>
+
+                    {/* Emergency Zone */}
+                    <div className="bg-red-950/20 backdrop-blur-md border border-red-900/40 p-6 rounded-3xl">
+                        <div className="flex items-center gap-3 mb-4 text-red-500">
+                            <AlertTriangle size={20} />
+                            <h3 className="text-sm font-bold uppercase tracking-wider">Danger Zone</h3>
+                        </div>
+                        <p className="text-red-200/60 text-xs leading-relaxed mb-6">
+                            Emergency liquidation protocol. Irreversible action.
+                        </p>
+                        <button
+                            onClick={() => setShowWithdrawModal(true)}
+                            className="w-full py-3 bg-red-600/10 hover:bg-red-600/20 border border-red-500/50 text-red-500 font-bold rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-sm group"
+                        >
+                            <X size={16} className="group-hover:rotate-90 transition-transform" />
+                            Liquidate Vault
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Withdrawal Confirmation Modal - Preserved */}
             {showWithdrawModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl max-w-sm w-full p-5 sm:p-6 shadow-xl border border-zinc-200 dark:border-zinc-800 animate-in zoom-in-95 duration-200">
-                        <div className="flex justify-between items-start mb-4">
-                            <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+                    <div className="bg-zinc-900 rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-white/10 animate-in zoom-in-95 duration-200">
+                        <div className="flex justify-between items-start mb-6">
+                            <h3 className="text-xl font-bold text-white">
                                 Confirm Withdrawal
                             </h3>
                             <button
                                 onClick={() => setShowWithdrawModal(false)}
                                 disabled={withdrawLoading}
-                                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors disabled:opacity-50"
+                                className="text-zinc-500 hover:text-white transition-colors"
                             >
                                 <X size={20} />
                             </button>
                         </div>
 
-                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 p-4 rounded-xl mb-6">
-                            <p className="text-amber-800 dark:text-amber-200 text-sm font-semibold mb-1">
-                                ⚠️ Warning
+                        <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl mb-6">
+                            <p className="text-red-400 text-sm font-semibold mb-1 flex items-center gap-2">
+                                <AlertTriangle size={14} /> Warning
                             </p>
-                            <p className="text-amber-700 dark:text-amber-300 text-sm leading-relaxed">
-                                This action cannot be undone. Your vault will be closed and all funds ({formatEth(parseFloat(data.balance))} ETH) will be returned to your wallet immediately.
+                            <p className="text-red-300/80 text-sm leading-relaxed">
+                                This action cannot be undone. Your vault will be closed and all funds ({formatEth(balanceNum)} ETH) will be returned to your wallet immediately.
                             </p>
                         </div>
 
@@ -292,14 +433,14 @@ export default function Dashboard({ provider, account }: DashboardProps) {
                             <button
                                 onClick={() => setShowWithdrawModal(false)}
                                 disabled={withdrawLoading}
-                                className="flex-1 py-3 px-4 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-semibold rounded-xl transition-all disabled:opacity-50 text-sm sm:text-base"
+                                className="flex-1 py-3 px-4 bg-zinc-800 hover:bg-zinc-700 text-white font-semibold rounded-xl transition-all disabled:opacity-50"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleEmergencyWithdraw}
                                 disabled={withdrawLoading}
-                                className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl shadow-sm transition-all disabled:opacity-70 flex justify-center items-center text-sm sm:text-base"
+                                className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl shadow-lg shadow-red-600/20 transition-all flex justify-center items-center"
                             >
                                 {withdrawLoading ? (
                                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

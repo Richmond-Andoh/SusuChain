@@ -18,28 +18,42 @@ export default function DashboardPage() {
 
     if (loading || !account || !provider) {
         return (
-            <div className="flex min-h-screen items-center justify-center">
-                <span className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+            <div className="flex min-h-screen items-center justify-center bg-black">
+                <span className="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
             </div>
         );
     }
 
     return (
-        <main className="flex min-h-screen flex-col items-center p-4 sm:p-6 bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 font-sans">
-            <div className="w-full max-w-md space-y-4 sm:space-y-6 mt-4 sm:mt-6">
-                <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100">Dashboard</h1>
+        <main className="relative min-h-screen flex flex-col items-center p-4 sm:p-6 font-sans overflow-hidden">
+            {/* Background Image & Effects */}
+            <div className="absolute inset-0 z-0">
+                <div
+                    className="absolute inset-0 bg-cover bg-center opacity-40"
+                    style={{ backgroundImage: "url('/hero-grid.jpg')" }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-black pointer-events-none" />
+                <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10 pointer-events-none mix-blend-overlay" />
+            </div>
+
+            <div className="relative z-10 w-full max-w-4xl space-y-8 mt-8 sm:mt-12">
+                {/* Only show "Dashboard" title if we are NOT on CreateVault view, or keep it consistent? 
+                    Actually, let's hide the generic title and let components handle their headers for a cleaner UI. 
+                */}
 
                 {hasVault === null ? (
-                    <div className="flex justify-center py-8">
-                        <span className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                    <div className="flex justify-center py-20">
+                        <span className="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
                     </div>
                 ) : hasVault ? (
                     <Dashboard provider={provider} account={account} />
                 ) : (
-                    <CreateVault
-                        provider={provider}
-                        onSuccess={refreshVaultStatus}
-                    />
+                    <div className="pt-10 animate-fade-in-up">
+                        <CreateVault
+                            provider={provider}
+                            onSuccess={refreshVaultStatus}
+                        />
+                    </div>
                 )}
             </div>
         </main>

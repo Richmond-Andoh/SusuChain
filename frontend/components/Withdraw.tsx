@@ -1,17 +1,51 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ethers } from "ethers";
-import { AlertTriangle, X } from "lucide-react";
+import { AlertTriangle, X, Award, CheckCircle2, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from "../lib/constants";
 
 interface WithdrawProps {
     provider: ethers.BrowserProvider;
     onSuccess: () => void;
+    account: string;
 }
 
-export default function Withdraw({ provider, onSuccess }: WithdrawProps) {
+export default function Withdraw({ provider, onSuccess, account }: WithdrawProps) {
     const [showModal, setShowModal] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [checking, setChecking] = useState(true);
+    const [status, setStatus] = useState<"loading" | "success" | "emergency">("loading");
+    const [balance, setBalance] = useState("0");
+    const [target, setTarget] = useState("0");
+
+    useEffect(() => {
+        checkStatus();
+    }, [provider, account]);
+
+    const checkStatus = async () => {
+        try {
+            const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+            const vault = await contract.vaults(account);
+
+            const bal = ethers.formatEther(vault[0] || 0); // indexed access
+            const tgt = ethers.formatEther(vault[1] || 0);
+
+            setBalance(bal);
+            setTarget(tgt);
+
+            // Logic: If balance >= target, it's a "Success" withdraw.
+            // Otherwise, it's an "Emergency" withdraw.
+            if (parseFloat(bal) >= parseFloat(tgt) && parseFloat(tgt) > 0) {
+                setStatus("success");
+            } else {
+                setStatus("emergency");
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setChecking(false);
+        }
+    };
 
     const handleWithdraw = async () => {
         setLoading(true);
@@ -24,7 +58,7 @@ export default function Withdraw({ provider, onSuccess }: WithdrawProps) {
             toast.info("Processing withdrawal...", { description: "Please confirm the transaction." });
             await tx.wait();
 
-            toast.success("Withdrawal Successful!", { description: "Your funds have been returned." });
+            toast.success("Withdrawal Successful!", { description: status === "success" ? "Goal achieved! Funds claimed." : "Funds returned to wallet." });
             onSuccess();
             setShowModal(false);
         } catch (err: any) {
@@ -35,49 +69,92 @@ export default function Withdraw({ provider, onSuccess }: WithdrawProps) {
         }
     };
 
-    return (
-        <>
-            <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm text-center">
-                <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <AlertTriangle className="text-red-600 dark:text-red-400" size={24} />
-                </div>
-                <h3 className="text-lg font-semibold mb-2 text-zinc-900 dark:text-zinc-100">
-                    Emergency Withdraw
-                </h3>
-                <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-6">
-                    Need access to your funds immediately? You can withdraw your entire balance at any time.
-                </p>
+    if (checking) {
+        return (
+            <div className="flex justify-center p-8">
+                <span className="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
 
-                <button
-                    onClick={() => setShowModal(true)}
-                    className="w-full py-3 px-6 bg-red-50 hover:bg-red-100 dark:bg-red-900/10 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 font-semibold rounded-xl border border-red-200 dark:border-red-800 transition-all"
-                >
-                    Withdraw All Funds
-                </button>
+    const isSuccess = status === "success";
+
+    return (
+        <div className="max-w-md mx-auto">
+            <div className={`relative group overflow-hidden rounded-[2rem] p-8 border backdrop-blur-xl transition-all duration-500 ${isSuccess ? 'bg-black/40 border-green-500/30 shadow-[0_0_50px_rgba(34,197,94,0.2)]' : 'bg-black/40 border-red-500/30'}`}>
+                {/* Decoration */}
+                <div className={`absolute inset-0 bg-gradient-to-br opacity-10 pointer-events-none ${isSuccess ? 'from-green-500 via-emerald-500 to-teal-500' : 'from-red-600 via-orange-600 to-amber-600'}`} />
+
+                <div className="relative z-10 flex flex-col items-center text-center">
+                    <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mb-6 border ${isSuccess ? 'bg-green-500/10 border-green-500/50 text-green-400' : 'bg-red-500/10 border-red-500/50 text-red-500'}`}>
+                        {isSuccess ? <Award size={40} className="animate-pulse" /> : <AlertTriangle size={40} />}
+                    </div>
+
+                    <h2 className="text-3xl font-bold text-white mb-2 tracking-tight">
+                        {isSuccess ? "Goal Achieved!" : "Emergency Protocol"}
+                    </h2>
+
+                    <p className="text-zinc-400 mb-8 leading-relaxed">
+                        {isSuccess
+                            ? `Congratulations! You have reached your savings target of ${target} ETH. You can now claim your funds reward-free.`
+                            : "Withdrawing before your goal is met activates emergency protocols. This action is irreversible."
+                        }
+                    </p>
+
+                    <div className="w-full bg-white/5 rounded-xl p-4 mb-8 border border-white/10">
+                        <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1">Available to Withdraw</p>
+                        <p className={`text-3xl font-mono font-black ${isSuccess ? 'text-green-400' : 'text-white'}`}>
+                            {parseFloat(balance).toFixed(4)} <span className="text-lg text-zinc-600 font-thin">ETH</span>
+                        </p>
+                    </div>
+
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className={`w-full py-4 text-lg font-bold rounded-xl shadow-lg transition-all transform active:scale-[0.98] flex items-center justify-center gap-3 ${isSuccess
+                                ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white shadow-green-500/20'
+                                : 'bg-red-600/10 hover:bg-red-600/20 border border-red-500/50 text-red-500'
+                            }`}
+                    >
+                        {isSuccess ? (
+                            <>
+                                <Ticket size={20} /> Claim Savings
+                            </>
+                        ) : (
+                            <>
+                                <X size={20} /> Liquidate Vault
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
 
             {/* Confirmation Modal */}
             {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl max-w-sm w-full p-6 shadow-xl border border-zinc-200 dark:border-zinc-800 animate-in fade-in zoom-in duration-200">
-                        <div className="flex justify-between items-start mb-4">
-                            <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-                                Are you sure?
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+                    <div className="bg-zinc-900 rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-white/10 animate-in zoom-in-95 duration-200">
+                        <div className="flex justify-between items-start mb-6">
+                            <h3 className="text-xl font-bold text-white">
+                                {isSuccess ? "Claim Confirmation" : "Confirm Liquidation"}
                             </h3>
                             <button
                                 onClick={() => setShowModal(false)}
-                                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                                disabled={loading}
+                                className="text-zinc-500 hover:text-white transition-colors"
                             >
                                 <X size={20} />
                             </button>
                         </div>
 
-                        <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl mb-6">
-                            <p className="text-amber-800 dark:text-amber-200 text-sm font-medium">
-                                ⚠️ This action cannot be undone.
+                        <div className={`border p-4 rounded-xl mb-6 ${isSuccess ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+                            <p className={`text-sm font-semibold mb-1 flex items-center gap-2 ${isSuccess ? 'text-green-400' : 'text-red-400'}`}>
+                                {isSuccess ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+                                {isSuccess ? "Ready to Transfer" : "Warning"}
                             </p>
-                            <p className="text-amber-700 dark:text-amber-300 text-sm mt-1">
-                                Your vault will be closed and all funds will be returned to your wallet immediately.
+                            <p className={`${isSuccess ? 'text-green-300/80' : 'text-red-300/80'} text-sm leading-relaxed`}>
+                                {isSuccess
+                                    ? `Function execution will transfer ${balance} ETH to your wallet and close this vault session.`
+                                    : `This action cannot be undone. All funds (${balance} ETH) will be returned immediately.`
+                                }
                             </p>
                         </div>
 
@@ -85,17 +162,20 @@ export default function Withdraw({ provider, onSuccess }: WithdrawProps) {
                             <button
                                 onClick={() => setShowModal(false)}
                                 disabled={loading}
-                                className="flex-1 py-3 px-4 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-semibold rounded-xl transition-all"
+                                className="flex-1 py-3 px-4 bg-zinc-800 hover:bg-zinc-700 text-white font-semibold rounded-xl transition-all disabled:opacity-50"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleWithdraw}
                                 disabled={loading}
-                                className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl shadow-md transition-all disabled:opacity-70 flex justify-center items-center"
+                                className={`flex-1 py-3 px-4 text-white font-semibold rounded-xl shadow-lg transition-all flex justify-center items-center ${isSuccess
+                                        ? 'bg-green-600 hover:bg-green-500 shadow-green-600/20'
+                                        : 'bg-red-600 hover:bg-red-500 shadow-red-600/20'
+                                    }`}
                             >
                                 {loading ? (
-                                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                 ) : (
                                     "Confirm"
                                 )}
@@ -104,6 +184,6 @@ export default function Withdraw({ provider, onSuccess }: WithdrawProps) {
                     </div>
                 </div>
             )}
-        </>
+        </div>
     );
 }
