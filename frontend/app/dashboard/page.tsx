@@ -25,9 +25,9 @@ export default function DashboardPage() {
     }
 
     return (
-        <main className="flex min-h-screen flex-col items-center p-6 bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 font-sans">
-            <div className="w-full max-w-md space-y-6 mt-6">
-                <h1 className="text-2xl font-bold">Dashboard</h1>
+        <main className="flex min-h-screen flex-col items-center p-4 sm:p-6 bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 font-sans">
+            <div className="w-full max-w-md space-y-4 sm:space-y-6 mt-4 sm:mt-6">
+                <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100">Dashboard</h1>
 
                 {hasVault === null ? (
                     <div className="flex justify-center py-8">
