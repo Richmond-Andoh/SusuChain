@@ -130,6 +130,13 @@ export default function Dashboard({ provider, account }: DashboardProps) {
         );
     }
 
+    // Helper function to format ETH values with up to 10 decimal places, removing trailing zeros
+    const formatEth = (value: number): string => {
+        if (value === 0) return '0';
+        const formatted = value.toFixed(10).replace(/\.?0+$/, '');
+        return formatted || '0';
+    };
+
     // Calculate amount left to reach goal
     const balanceNum = parseFloat(data.balance) || 0;
     const targetNum = parseFloat(data.targetAmount) || 0;
@@ -152,7 +159,7 @@ export default function Dashboard({ provider, account }: DashboardProps) {
                                 Current Balance
                             </p>
                             <p className="text-3xl sm:text-4xl font-bold text-indigo-600 dark:text-indigo-400 leading-tight">
-                                {balanceNum.toFixed(4)}
+                                {formatEth(balanceNum)}
                                 <span className="text-lg sm:text-xl font-semibold text-zinc-500 dark:text-zinc-400 ml-2">
                                     ETH
                                 </span>
@@ -167,7 +174,7 @@ export default function Dashboard({ provider, account }: DashboardProps) {
                                     Savings Goal
                                 </p>
                                 <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100 leading-tight">
-                                    {targetNum.toFixed(4)}
+                                    {formatEth(targetNum)}
                                     <span className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 ml-1">
                                         ETH
                                     </span>
@@ -180,7 +187,7 @@ export default function Dashboard({ provider, account }: DashboardProps) {
                                     Total Deposited
                                 </p>
                                 <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 leading-tight">
-                                    {totalDepositedNum.toFixed(4)}
+                                    {formatEth(totalDepositedNum)}
                                     <span className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 ml-1">
                                         ETH
                                     </span>
@@ -194,7 +201,7 @@ export default function Dashboard({ provider, account }: DashboardProps) {
                                 Amount Left to Reach Goal
                             </p>
                             <p className="text-2xl sm:text-3xl font-bold text-amber-600 dark:text-amber-400 leading-tight">
-                                {amountLeft.toFixed(4)}
+                                {formatEth(amountLeft)}
                                 <span className="text-base sm:text-lg font-semibold text-zinc-500 dark:text-zinc-400 ml-2">
                                     ETH
                                 </span>
@@ -222,7 +229,7 @@ export default function Dashboard({ provider, account }: DashboardProps) {
                         />
                     </div>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-3">
-                        {parseFloat(data.balance).toFixed(4)} of {parseFloat(data.targetAmount).toFixed(4)} ETH saved
+                        {formatEth(parseFloat(data.balance))} of {formatEth(parseFloat(data.targetAmount))} ETH saved
                     </p>
                 </div>
             </div>
@@ -277,7 +284,7 @@ export default function Dashboard({ provider, account }: DashboardProps) {
                                 ⚠️ Warning
                             </p>
                             <p className="text-amber-700 dark:text-amber-300 text-sm leading-relaxed">
-                                This action cannot be undone. Your vault will be closed and all funds ({parseFloat(data.balance).toFixed(4)} ETH) will be returned to your wallet immediately.
+                                This action cannot be undone. Your vault will be closed and all funds ({formatEth(parseFloat(data.balance))} ETH) will be returned to your wallet immediately.
                             </p>
                         </div>
 
