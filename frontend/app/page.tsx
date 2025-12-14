@@ -43,7 +43,7 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 font-sans overflow-hidden">
       {showOnboarding ? (
-        <div className="flex-1 flex items-center justify-center py-8 animate-in fade-in duration-500">
+        <div className="flex-1 w-full animate-in fade-in duration-500">
           <OnboardingCarousel onComplete={handleOnboardingComplete} />
         </div>
       ) : (
