@@ -5,7 +5,7 @@ import { LogOut, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function Navbar() {
-    const { account, disconnectWallet } = useWallet();
+    const { account, disconnectWallet, isWrongNetwork } = useWallet();
     const router = useRouter();
 
     const handleDisconnect = async () => {
@@ -24,15 +24,29 @@ export default function Navbar() {
                 </span>
             </div>
 
-            {account && (
-                <button
-                    onClick={handleDisconnect}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                >
-                    <LogOut size={16} />
-                    <span>Disconnect</span>
-                </button>
-            )}
+            {account ? (
+                <div className="flex items-center gap-4">
+                    <div className="hidden md:flex flex-col items-end">
+                        <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                            {account.slice(0, 6)}...{account.slice(-4)}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                            <div className={`w-2 h-2 rounded-full ${isWrongNetwork ? "bg-red-500" : "bg-green-500"}`} />
+                            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                                {isWrongNetwork ? "Wrong Network" : "Sepolia"}
+                            </span>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={handleDisconnect}
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                    >
+                        <LogOut size={16} />
+                        <span className="md:hidden">Disconnect</span>
+                    </button>
+                </div>
+            ) : null}
         </nav>
     );
 }

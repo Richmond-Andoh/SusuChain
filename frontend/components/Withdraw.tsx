@@ -1,8 +1,7 @@
-"use client";
-
 import { useState } from "react";
 import { ethers } from "ethers";
 import { AlertTriangle, X } from "lucide-react";
+import { toast } from "sonner";
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from "../lib/constants";
 
 interface WithdrawProps {
@@ -13,24 +12,24 @@ interface WithdrawProps {
 export default function Withdraw({ provider, onSuccess }: WithdrawProps) {
     const [showModal, setShowModal] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
     const handleWithdraw = async () => {
         setLoading(true);
-        setError(null);
 
         try {
             const signer = await provider.getSigner();
             const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
             const tx = await contract.emergencyWithdraw();
+            toast.info("Processing withdrawal...", { description: "Please confirm the transaction." });
             await tx.wait();
 
+            toast.success("Withdrawal Successful!", { description: "Your funds have been returned." });
             onSuccess();
             setShowModal(false);
         } catch (err: any) {
             console.error(err);
-            setError(err.reason || err.message || "Failed to withdraw");
+            toast.error("Withdrawal Failed", { description: err.reason || err.message });
         } finally {
             setLoading(false);
         }
@@ -81,12 +80,6 @@ export default function Withdraw({ provider, onSuccess }: WithdrawProps) {
                                 Your vault will be closed and all funds will be returned to your wallet immediately.
                             </p>
                         </div>
-
-                        {error && (
-                            <div className="mb-4 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
-                                {error}
-                            </div>
-                        )}
 
                         <div className="flex gap-3">
                             <button

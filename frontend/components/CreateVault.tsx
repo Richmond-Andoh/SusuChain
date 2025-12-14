@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ethers } from "ethers";
+import { toast } from "sonner";
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from "../lib/constants";
 
 interface CreateVaultProps {
@@ -12,61 +13,62 @@ interface CreateVaultProps {
 export default function CreateVault({ provider, onSuccess }: CreateVaultProps) {
     const [targetAmount, setTargetAmount] = useState("");
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        setError(null);
 
         try {
             if (!targetAmount || parseFloat(targetAmount) <= 0) {
-                throw new Error("Please enter a valid amount");
+                throw new Error("Please enter a valid target amount");
             }
 
             const signer = await provider.getSigner();
             const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
-            const amountInWei = ethers.parseEther(targetAmount);
+            const targetWei = ethers.parseEther(targetAmount);
 
-            const tx = await contract.createVault(amountInWei);
+            const tx = await contract.createVault(targetWei);
+            toast.info("Creating your vault...", { description: "Please confirm the transaction." });
             await tx.wait();
 
+            toast.success("Vault Created!", { description: `Target set to ${targetAmount} ETH` });
             onSuccess();
         } catch (err: any) {
             console.error(err);
-            setError(err.reason || err.message || "Failed to create vault");
+            toast.error("Failed to create vault", { description: err.reason || err.message });
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-sm">
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
             <h2 className="text-xl font-bold mb-4 text-zinc-900 dark:text-zinc-100">
                 Start Saving
             </h2>
+            <p className="text-zinc-500 dark:text-zinc-400 mb-6 text-sm">
+                Create a new vault and set your savings goal.
+            </p>
+
             <form onSubmit={handleCreate} className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                        Savings Goal (ETH)
+                        Target Amount (ETH)
                     </label>
-                    <input
-                        type="number"
-                        step="0.0001"
-                        value={targetAmount}
-                        onChange={(e) => setTargetAmount(e.target.value)}
-                        placeholder="0.1"
-                        className="w-full px-4 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                        disabled={loading}
-                    />
-                </div>
-
-                {error && (
-                    <div className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
-                        {error}
+                    <div className="relative">
+                        <input
+                            type="number"
+                            step="0.0001"
+                            value={targetAmount}
+                            onChange={(e) => setTargetAmount(e.target.value)}
+                            placeholder="1.0"
+                            className="w-full px-4 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                            disabled={loading}
+                        />
+                        <span className="absolute right-4 top-3 text-zinc-400 text-sm">ETH</span>
                     </div>
-                )}
+                </div>
 
                 <button
                     type="submit"

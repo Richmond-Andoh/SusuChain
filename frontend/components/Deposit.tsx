@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ethers } from "ethers";
+import { toast } from "sonner";
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from "../lib/constants";
 
 interface DepositProps {
@@ -12,14 +13,10 @@ interface DepositProps {
 export default function Deposit({ provider, onSuccess }: DepositProps) {
     const [amount, setAmount] = useState("");
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
     const handleDeposit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        setError(null);
-        setSuccessMsg(null);
 
         try {
             if (!amount || parseFloat(amount) <= 0) {
@@ -32,14 +29,15 @@ export default function Deposit({ provider, onSuccess }: DepositProps) {
             const amountInWei = ethers.parseEther(amount);
 
             const tx = await contract.deposit({ value: amountInWei });
+            toast.info("Processing deposit...", { description: "Please confirm the transaction." });
             await tx.wait();
 
-            setSuccessMsg(`Successfully deposited ${amount} ETH!`);
+            toast.success("Deposit Successful!", { description: `Added ${amount} ETH to your vault.` });
             setAmount("");
             onSuccess();
         } catch (err: any) {
             console.error(err);
-            setError(err.reason || err.message || "Failed to deposit");
+            toast.error("Deposit Failed", { description: err.reason || err.message });
         } finally {
             setLoading(false);
         }
@@ -62,24 +60,12 @@ export default function Deposit({ provider, onSuccess }: DepositProps) {
                             value={amount}
                             onChange={(e) => setAmount(e.target.value)}
                             placeholder="0.01"
-                            className="w-full px-4 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                            className="w-full px-4 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                             disabled={loading}
                         />
-                        <span className="absolute right-4 top-2 text-zinc-400 text-sm">ETH</span>
+                        <span className="absolute right-4 top-3 text-zinc-400 text-sm">ETH</span>
                     </div>
                 </div>
-
-                {error && (
-                    <div className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
-                        {error}
-                    </div>
-                )}
-
-                {successMsg && (
-                    <div className="text-sm text-green-600 bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
-                        {successMsg}
-                    </div>
-                )}
 
                 <button
                     type="submit"

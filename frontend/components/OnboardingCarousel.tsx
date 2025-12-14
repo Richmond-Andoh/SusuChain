@@ -5,8 +5,7 @@ import Image from "next/image";
 import { ChevronRight } from "lucide-react";
 
 interface OnboardingCarouselProps {
-    onConnect: () => void;
-    loading: boolean;
+    onComplete: () => void;
 }
 
 const slides = [
@@ -30,7 +29,7 @@ const slides = [
     },
 ];
 
-export default function OnboardingCarousel({ onConnect, loading }: OnboardingCarouselProps) {
+export default function OnboardingCarousel({ onComplete }: OnboardingCarouselProps) {
     const [currentSlide, setCurrentSlide] = useState(0);
 
     const nextSlide = () => {
@@ -47,21 +46,21 @@ export default function OnboardingCarousel({ onConnect, loading }: OnboardingCar
                 style={{ transform: `translateX(-${currentSlide * 100}%)` }}
             >
                 {slides.map((slide) => (
-                    <div key={slide.id} className="w-full flex-shrink-0 flex flex-col items-center justify-center p-8 text-center space-y-8">
-                        <div className="relative w-64 h-64 md:w-80 md:h-80">
+                    <div key={slide.id} className="w-full flex-shrink-0 flex flex-col items-center justify-center px-6 text-center space-y-8">
+                        <div className="relative w-full aspect-square max-w-[320px] mx-auto">
                             <Image
                                 src={slide.image}
                                 alt={slide.title}
                                 fill
-                                className="object-contain drop-shadow-2xl"
+                                className="object-cover rounded-3xl shadow-2xl"
                                 priority
                             />
                         </div>
-                        <div className="space-y-4">
-                            <h2 className="text-3xl font-bold text-zinc-900 dark:text-white">
+                        <div className="space-y-3 max-w-xs mx-auto">
+                            <h2 className="text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">
                                 {slide.title}
                             </h2>
-                            <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                            <p className="text-base text-zinc-600 dark:text-zinc-400 leading-relaxed">
                                 {slide.description}
                             </p>
                         </div>
@@ -77,8 +76,8 @@ export default function OnboardingCarousel({ onConnect, loading }: OnboardingCar
                         <div
                             key={index}
                             className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${currentSlide === index
-                                    ? "bg-indigo-600 w-8"
-                                    : "bg-zinc-300 dark:bg-zinc-700"
+                                ? "bg-indigo-600 w-8"
+                                : "bg-zinc-300 dark:bg-zinc-700"
                                 }`}
                         />
                     ))}
@@ -88,11 +87,10 @@ export default function OnboardingCarousel({ onConnect, loading }: OnboardingCar
                 <div className="w-full">
                     {currentSlide === slides.length - 1 ? (
                         <button
-                            onClick={onConnect}
-                            disabled={loading}
-                            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-lg rounded-2xl shadow-xl shadow-indigo-500/20 transition-all transform active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+                            onClick={onComplete}
+                            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-lg rounded-2xl shadow-xl shadow-indigo-500/20 transition-all transform active:scale-95"
                         >
-                            {loading ? "Connecting..." : "Get Started"}
+                            Get Started
                         </button>
                     ) : (
                         <button
