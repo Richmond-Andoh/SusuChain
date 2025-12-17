@@ -17,6 +17,13 @@ export default function Withdraw({ provider, onSuccess, account }: WithdrawProps
     const [status, setStatus] = useState<"loading" | "success" | "emergency">("loading");
     const [balance, setBalance] = useState("0");
     const [target, setTarget] = useState("0");
+    const [withdrawalReason, setWithdrawalReason] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (showModal) {
+            setWithdrawalReason(null);
+        }
+    }, [showModal]);
 
     useEffect(() => {
         checkStatus();
@@ -111,8 +118,8 @@ export default function Withdraw({ provider, onSuccess, account }: WithdrawProps
                     <button
                         onClick={() => setShowModal(true)}
                         className={`w-full py-4 text-lg font-bold rounded-xl shadow-lg transition-all transform active:scale-[0.98] flex items-center justify-center gap-3 ${isSuccess
-                                ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white shadow-green-500/20'
-                                : 'bg-red-600/10 hover:bg-red-600/20 border border-red-500/50 text-red-500'
+                            ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white shadow-green-500/20'
+                            : 'bg-red-600/10 hover:bg-red-600/20 border border-red-500/50 text-red-500'
                             }`}
                     >
                         {isSuccess ? (
@@ -158,6 +165,35 @@ export default function Withdraw({ provider, onSuccess, account }: WithdrawProps
                             </p>
                         </div>
 
+                        {/* Reason Selector - Only for Emergency */}
+                        {!isSuccess && (
+                            <div className="mb-6 space-y-3">
+                                <label className="text-zinc-400 text-sm font-medium">Why are you withdrawing early?</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {["Medical", "Family", "Job Loss", "Other"].map((reason) => (
+                                        <button
+                                            key={reason}
+                                            onClick={() => setWithdrawalReason(reason)}
+                                            className={`p-3 rounded-lg text-sm font-medium transition-all border ${withdrawalReason === reason
+                                                ? "bg-red-500/20 border-red-500 text-red-400"
+                                                : "bg-zinc-800 border-transparent text-zinc-400 hover:bg-zinc-700 hover:text-white"
+                                                }`}
+                                        >
+                                            {reason}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Confirmation Reason Display */}
+                        {!isSuccess && withdrawalReason && (
+                            <div className="mb-6 p-4 bg-zinc-800/50 rounded-xl border border-white/5">
+                                <p className="text-zinc-400 text-xs uppercase tracking-wider mb-1">Confirm Reason</p>
+                                <p className="text-white font-medium">{withdrawalReason}</p>
+                            </div>
+                        )}
+
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setShowModal(false)}
@@ -168,10 +204,10 @@ export default function Withdraw({ provider, onSuccess, account }: WithdrawProps
                             </button>
                             <button
                                 onClick={handleWithdraw}
-                                disabled={loading}
+                                disabled={loading || (!isSuccess && !withdrawalReason)}
                                 className={`flex-1 py-3 px-4 text-white font-semibold rounded-xl shadow-lg transition-all flex justify-center items-center ${isSuccess
-                                        ? 'bg-green-600 hover:bg-green-500 shadow-green-600/20'
-                                        : 'bg-red-600 hover:bg-red-500 shadow-red-600/20'
+                                    ? 'bg-green-600 hover:bg-green-500 shadow-green-600/20'
+                                    : 'bg-red-600 hover:bg-red-500 shadow-red-600/20'
                                     }`}
                             >
                                 {loading ? (

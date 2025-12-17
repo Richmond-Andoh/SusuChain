@@ -13,6 +13,7 @@ interface CreateVaultProps {
 
 export default function CreateVault({ provider, onSuccess }: CreateVaultProps) {
     const [targetAmount, setTargetAmount] = useState("");
+    const [goalName, setGoalName] = useState("");
     const [loading, setLoading] = useState(false);
 
     const handleCreate = async (e: React.FormEvent) => {
@@ -20,11 +21,15 @@ export default function CreateVault({ provider, onSuccess }: CreateVaultProps) {
         setLoading(true);
 
         try {
+            if (!goalName.trim()) {
+                throw new Error("Please enter a goal name");
+            }
             if (!targetAmount || parseFloat(targetAmount) <= 0) {
                 throw new Error("Please enter a valid target amount");
             }
 
             const signer = await provider.getSigner();
+            const address = await signer.getAddress();
             const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
             const targetWei = ethers.parseEther(targetAmount);
@@ -33,7 +38,15 @@ export default function CreateVault({ provider, onSuccess }: CreateVaultProps) {
             toast.info("Creating your vault...", { description: "Please confirm the transaction." });
             await tx.wait();
 
-            toast.success("Vault Created!", { description: `Target set to ${targetAmount} ETH` });
+            // Store goal details off-chain
+            const goalData = {
+                name: goalName,
+                target: targetAmount,
+                createdAt: Date.now()
+            };
+            localStorage.setItem(`susu_vault_goal_${address.toLowerCase()}`, JSON.stringify(goalData));
+
+            toast.success("Vault Created!", { description: `Goal "${goalName}" set to ${targetAmount} ETH` });
             onSuccess();
         } catch (err: any) {
             console.error(err);
@@ -63,25 +76,43 @@ export default function CreateVault({ provider, onSuccess }: CreateVaultProps) {
                     </div>
 
                     <form onSubmit={handleCreate} className="space-y-8">
-                        <div className="space-y-3">
-                            <label className="block text-sm font-medium text-zinc-300 ml-1">
-                                SAvings Goal (ETH)
-                            </label>
-                            <div className="relative group/input">
-                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                    <span className="text-zinc-500 font-mono">Ξ</span>
-                                </div>
+                        <div className="space-y-6">
+                            {/* Goal Name Input */}
+                            <div className="space-y-3">
+                                <label className="block text-sm font-medium text-zinc-300 ml-1">
+                                    Goal Name
+                                </label>
                                 <input
-                                    type="number"
-                                    step="0.0001"
-                                    value={targetAmount}
-                                    onChange={(e) => setTargetAmount(e.target.value)}
-                                    placeholder="1.0"
-                                    className="w-full pl-10 pr-16 py-4 bg-zinc-900/50 border border-zinc-700/50 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all font-mono text-xl"
+                                    type="text"
+                                    value={goalName}
+                                    onChange={(e) => setGoalName(e.target.value)}
+                                    placeholder="e.g. Dream Car, New Laptop"
+                                    className="w-full px-4 py-4 bg-zinc-900/50 border border-zinc-700/50 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all font-sans text-lg"
                                     disabled={loading}
                                 />
-                                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
-                                    <span className="text-cyan-500 font-bold text-sm bg-cyan-500/10 px-2 py-1 rounded-md">ETH</span>
+                            </div>
+
+                            {/* Target Amount Input */}
+                            <div className="space-y-3">
+                                <label className="block text-sm font-medium text-zinc-300 ml-1">
+                                    Target Amount (ETH)
+                                </label>
+                                <div className="relative group/input">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <span className="text-zinc-500 font-mono">Ξ</span>
+                                    </div>
+                                    <input
+                                        type="number"
+                                        step="0.0001"
+                                        value={targetAmount}
+                                        onChange={(e) => setTargetAmount(e.target.value)}
+                                        placeholder="1.0"
+                                        className="w-full pl-10 pr-16 py-4 bg-zinc-900/50 border border-zinc-700/50 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all font-mono text-xl"
+                                        disabled={loading}
+                                    />
+                                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                        <span className="text-cyan-500 font-bold text-sm bg-cyan-500/10 px-2 py-1 rounded-md">ETH</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>

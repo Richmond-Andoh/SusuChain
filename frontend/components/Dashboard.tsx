@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
-import { AlertTriangle, X, TrendingUp, ShieldCheck, Clock, Wallet, Zap, Activity, Database, Hash, ExternalLink, Copy, CheckCircle2, Target } from "lucide-react";
+import { AlertTriangle, X, TrendingUp, ShieldCheck, Clock, Wallet, Zap, Activity, Database, Hash, ExternalLink, Copy, CheckCircle2, Target, Stethoscope, Users, Briefcase, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from "../lib/constants";
 import Deposit from "./Deposit";
+import VaultStatusCard from "./VaultStatusCard";
 import { useWallet } from "../context/WalletContext";
 
 interface DashboardProps {
@@ -42,6 +43,30 @@ export default function Dashboard({ provider, account }: DashboardProps) {
     const [showWithdrawModal, setShowWithdrawModal] = useState(false);
     const [withdrawLoading, setWithdrawLoading] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [goalName, setGoalName] = useState("Vault Goal");
+    const [withdrawalReason, setWithdrawalReason] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (showWithdrawModal) {
+            setWithdrawalReason(null);
+        }
+    }, [showWithdrawModal]);
+
+    useEffect(() => {
+        if (account) {
+            const storedGoal = localStorage.getItem(`susu_vault_goal_${account.toLowerCase()}`);
+            if (storedGoal) {
+                try {
+                    const parsed = JSON.parse(storedGoal);
+                    if (parsed.name) setGoalName(parsed.name);
+                } catch (e) {
+                    console.error("Error parsing local goal", e);
+                }
+            } else {
+                setGoalName("Vault Goal");
+            }
+        }
+    }, [account]);
 
     useEffect(() => {
         fetchVaultData();
@@ -79,24 +104,38 @@ export default function Dashboard({ provider, account }: DashboardProps) {
             let txHistory: Transaction[] = [];
 
             try {
+                // Fetch from block 0 (or strictly 'earliest') to 'latest' explicitly to ensure RPC behaves
                 const depositFilter = contract.filters.Deposited(account);
-                const depositEvents = await contract.queryFilter(depositFilter);
+                const depositEvents = await contract.queryFilter(depositFilter, 0, "latest");
 
                 let totalDepositedWei = BigInt(0);
 
-                // Process recent transactions (last 3)
-                const recentEvents = depositEvents.slice(-3).reverse(); // Get last 3
+                // Process recent transactions (last 3). Events are usually chronological.
+                const recentEvents = depositEvents.slice(-3).reverse();
 
-                // Fetch timestamps for recent events
-                txHistory = await Promise.all(recentEvents.map(async (event: any) => {
-                    const block = await provider.getBlock(event.blockNumber);
-                    return {
-                        hash: event.transactionHash,
-                        amount: ethers.formatEther(event.args.amount),
-                        blockNumber: event.blockNumber,
-                        timestamp: block?.timestamp
-                    };
-                }));
+                // Fetch timestamps safely
+                const historyPromises = recentEvents.map(async (event: any) => {
+                    try {
+                        const block = await provider.getBlock(event.blockNumber);
+                        return {
+                            hash: event.transactionHash,
+                            amount: ethers.formatEther(event.args.amount),
+                            blockNumber: event.blockNumber,
+                            timestamp: block?.timestamp || Math.floor(Date.now() / 1000) // Fallback if block not indexed yet
+                        };
+                    } catch (e) {
+                        console.warn(`Failed to fetch block ${event.blockNumber}`, e);
+                        // Return a partial object or null to be filtered out
+                        return {
+                            hash: event.transactionHash,
+                            amount: ethers.formatEther(event.args.amount),
+                            blockNumber: event.blockNumber,
+                            timestamp: Math.floor(Date.now() / 1000) // Approximate
+                        };
+                    }
+                });
+
+                txHistory = await Promise.all(historyPromises);
 
                 depositEvents.forEach((event: any) => {
                     if (event.args && event.args.amount) {
@@ -109,6 +148,8 @@ export default function Dashboard({ provider, account }: DashboardProps) {
                 }
             } catch (eventErr) {
                 console.warn("Could not fetch events:", eventErr);
+                // Fallback: If event fetching fails, we at least have the balance from the vault struct
+                // We keep finalTotalDeposited as balanceEth (initialized above)
             }
 
             setTransactions(txHistory);
@@ -148,6 +189,10 @@ export default function Dashboard({ provider, account }: DashboardProps) {
 
             toast.success("Withdrawal Successful!", { description: "Your funds have been returned." });
 
+            // Clear local goal data on withdrawal/reset
+            localStorage.removeItem(`susu_vault_goal_${account.toLowerCase()}`);
+            setGoalName("Vault Goal");
+
             // Refresh global vault status to trigger redirect to Create Page
             await refreshVaultStatus();
 
@@ -178,6 +223,8 @@ export default function Dashboard({ provider, account }: DashboardProps) {
         );
     }
 
+
+
     if (!data) return null;
 
     const formatEth = (value: number) => value === 0 ? '0' : value.toFixed(4).replace(/\.?0+$/, '');
@@ -185,6 +232,10 @@ export default function Dashboard({ provider, account }: DashboardProps) {
     const targetNum = parseFloat(data.targetAmount) || 0;
     const totalDepositedNum = parseFloat(data.totalDeposited) || 0;
     const amountLeft = Math.max(0, targetNum - balanceNum);
+
+    const isLocked = balanceNum < targetNum;
+    // transactions[0] is the most recent because of .reverse() in fetchVaultData
+    const lastDepositTime = transactions.length > 0 ? transactions[0].timestamp : undefined;
 
     return (
         <div className="w-full space-y-6 animate-fade-in-up">
@@ -207,6 +258,13 @@ export default function Dashboard({ provider, account }: DashboardProps) {
                 </div>
             )}
 
+            {/* Vault Status Card - New Feature */}
+            <VaultStatusCard
+                isLocked={isLocked}
+                totalSaved={data.totalDeposited}
+                lastDepositTime={lastDepositTime}
+            />
+
             {/* Main Hero Card */}
             <div className="relative group overflow-hidden rounded-[2rem]">
                 <div className="absolute inset-0 bg-gradient-to-r from-cyan-600/20 via-blue-600/20 to-purple-600/20 blur opacity-75" />
@@ -225,7 +283,7 @@ export default function Dashboard({ provider, account }: DashboardProps) {
                         {/* Target/Goal Amount - Now Prominent */}
                         <div className="relative z-10 md:text-right">
                             <h2 className="text-sm font-medium text-purple-400 tracking-wider uppercase mb-2 flex items-center gap-2 md:justify-end">
-                                <Target size={16} /> Vault Goal
+                                <Target size={16} /> {goalName}
                             </h2>
                             <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-200 via-purple-100 to-indigo-200 tracking-tight drop-shadow-[0_0_15px_rgba(168,85,247,0.3)]">
                                 {formatEth(targetNum)} <span className="text-2xl text-zinc-600 font-thin">ETH</span>
@@ -429,6 +487,39 @@ export default function Dashboard({ provider, account }: DashboardProps) {
                             </p>
                         </div>
 
+                        {/* Reason Selector */}
+                        <div className="mb-6 space-y-3">
+                            <label className="text-zinc-400 text-sm font-medium">Why are you withdrawing early?</label>
+                            <div className="grid grid-cols-2 gap-3">
+                                {[
+                                    { id: "Medical", icon: Stethoscope, label: "Medical" },
+                                    { id: "Family", icon: Users, label: "Family" },
+                                    { id: "Job Loss", icon: Briefcase, label: "Job Loss" },
+                                    { id: "Other", icon: HelpCircle, label: "Other" }
+                                ].map((item) => (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => setWithdrawalReason(item.id)}
+                                        className={`p-4 rounded-xl text-sm font-medium transition-all border flex flex-col items-center gap-2 ${withdrawalReason === item.id
+                                            ? "bg-red-500/20 border-red-500 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.2)]"
+                                            : "bg-zinc-800/50 border-white/5 text-zinc-400 hover:bg-zinc-800 hover:text-white hover:border-white/10"
+                                            }`}
+                                    >
+                                        <item.icon size={20} className={withdrawalReason === item.id ? "animate-pulse" : ""} />
+                                        {item.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Confirmation with Reason */}
+                        {withdrawalReason && (
+                            <div className="mb-6 p-4 bg-zinc-800/50 rounded-xl border border-white/5">
+                                <p className="text-zinc-400 text-xs uppercase tracking-wider mb-1">Confirm Reason</p>
+                                <p className="text-white font-medium">{withdrawalReason}</p>
+                            </div>
+                        )}
+
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setShowWithdrawModal(false)}
@@ -439,8 +530,8 @@ export default function Dashboard({ provider, account }: DashboardProps) {
                             </button>
                             <button
                                 onClick={handleEmergencyWithdraw}
-                                disabled={withdrawLoading}
-                                className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl shadow-lg shadow-red-600/20 transition-all flex justify-center items-center"
+                                disabled={withdrawLoading || !withdrawalReason}
+                                className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl shadow-lg shadow-red-600/20 transition-all flex justify-center items-center disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {withdrawLoading ? (
                                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
