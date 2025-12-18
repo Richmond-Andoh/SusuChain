@@ -19,7 +19,7 @@ SusuChain/
 ### Prerequisites
 
 - Node.js v18+
-- npm or yarn
+- npm
 - MetaMask or compatible Web3 wallet
 
 ### Installation
