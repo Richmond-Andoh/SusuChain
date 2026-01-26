@@ -42,9 +42,6 @@ cd ../frontend
 npm install
 ```
 
-## Development
-
-See individual README files in `/contracts` and `/frontend` directories for specific instructions.
 
 ## Tech Stack
 
