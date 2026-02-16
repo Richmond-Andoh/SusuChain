@@ -43,11 +43,6 @@ npm install
 ```
 
 
-## Tech Stack
-
-- **Blockchain**: Solidity, Hardhat, Scroll
-- **Frontend**: Next.js, TailwindCSS, ethers.js
-- **Mobile-first**: Responsive design optimized for mobile devices
 
 ## License
 
