@@ -6,13 +6,6 @@ A mobile-first decentralized micro-savings and emergency fund DApp for African i
 
 SusuChain allows users to save tiny amounts securely on Scroll blockchain and withdraw funds only during emergencies or when savings goals are reached. This removes temptation, middlemen, and fraud common in traditional susu systems.
 
-## Project Structure
-
-```
-SusuChain/
-├── contracts/          # Hardhat smart contracts
-└── frontend/           # Next.js web application
-```
 
 ## Getting Started
 
