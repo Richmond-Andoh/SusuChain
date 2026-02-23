@@ -29,10 +29,5 @@ cd contracts
 npm install
 ```
 
-3. Install dependencies for frontend:
-```bash
-cd ../frontend
-npm install
-```
 
 
