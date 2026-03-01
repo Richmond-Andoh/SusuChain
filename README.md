@@ -23,11 +23,5 @@ git clone <your-repo-url>
 cd SusuChain
 ```
 
-2. Install dependencies for contracts:
-```bash
-cd contracts
-npm install
-```
-
 
 
